@@ -1,0 +1,479 @@
+<!DOCTYPE html>
+<html lang="my">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>KKG Mobile</title>
+<link rel="manifest" href="manifest.json">
+<meta name="theme-color" content="#121212">
+<meta name="apple-mobile-web-app-capable" content="yes">
+<meta name="apple-mobile-web-app-status-bar-style" content="black-translucent">
+<meta name="apple-mobile-web-app-title" content="KKG Mobile">
+<link rel="apple-touch-icon" href="/images/icon-192x192.png">
+<script src="https://www.gstatic.com/firebasejs/9.22.1/firebase-app-compat.js"></script>
+<script src="https://www.gstatic.com/firebasejs/9.22.1/firebase-firestore-compat.js"></script>
+<link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.4.0/css/all.min.css">
+
+<style>
+*{box-sizing:border-box}
+body{background:#121212;color:#fff;font-family:sans-serif;margin:0;padding-bottom:50px;transition:.3s;user-select:none;-webkit-user-select:none;background-size:cover;background-position:center;background-attachment:fixed}
+body.light-mode{background:#f4f4f4;color:#000}
+.main-header{background:rgba(30,30,30,.75);backdrop-filter:blur(12px);-webkit-backdrop-filter:blur(12px);padding:10px 15px;border-bottom:1px solid rgba(118,255,3,.3);position:sticky;top:0;z-index:1000;display:flex;align-items:center;justify-content:space-between;gap:8px;box-shadow:0 4px 20px rgba(0,0,0,.3)}
+.logo-container{display:flex;align-items:center;gap:10px;cursor:pointer;position:relative;flex-shrink:0}
+.logo-text-group{display:flex;flex-direction:column;align-items:flex-start}
+.logo-text{color:#fff;font-size:17px;font-weight:900;letter-spacing:.5px;line-height:1.1;white-space:nowrap}
+.logo-highlight{color:#76ff03}.sub-text{color:#aaa;font-size:8.5px;margin-top:2px;font-weight:bold;text-transform:uppercase;letter-spacing:.5px;white-space:nowrap}
+.header-gif-container{display:none;align-items:center;justify-content:center;flex-grow:1;max-width:150px;overflow:hidden;margin:0 6px}
+.header-gif-container img{width:100%;max-height:38px;object-fit:contain;border-radius:4px}
+.header-actions{display:flex;align-items:center;gap:10px}
+.call-icon-btn{background:rgba(255,255,255,.1);border:1px solid rgba(255,255,255,.2);color:#fff;font-size:15px;text-decoration:none;display:flex;align-items:center;justify-content:center;width:34px;height:34px;border-radius:50%;animation:phoneRing 1.2s infinite ease-in-out}
+@keyframes phoneRing{0%,50%,100%{transform:rotate(0)}10%{transform:rotate(-15deg)}20%{transform:rotate(15deg)}30%{transform:rotate(-15deg)}40%{transform:rotate(15deg)}}
+.logo-timer-bar{position:absolute;bottom:0;left:0;height:3px;background:#76ff03;width:0}
+.ticker-container{background:#000;padding:10px;border-bottom:1px solid #222;text-align:center;color:#76ff03;font-size:13px;font-weight:bold;overflow:hidden;white-space:nowrap}
+.slider-section{
+width:92%;max-width:850px;height:205px;margin:22px auto;
+position:relative;overflow:hidden;border-radius:28px;
+background:linear-gradient(135deg,#0d1117,#171c24 45%,#0b0f14);
+border:1px solid rgba(118,255,3,.24);
+box-shadow:0 18px 45px rgba(0,0,0,.55),0 0 35px rgba(118,255,3,.08);
+perspective:1200px;
+}
+.slider-section:before{
+content:"";position:absolute;inset:-40%;z-index:5;pointer-events:none;
+background:linear-gradient(115deg,transparent 35%,rgba(255,255,255,.13) 48%,transparent 58%);
+transform:translateX(-55%) rotate(8deg);
+animation:bannerShine 5s ease-in-out infinite;
+mix-blend-mode:screen;
+}
+.slider-section:after{
+content:"";position:absolute;inset:0;z-index:4;pointer-events:none;
+border-radius:28px;
+background:linear-gradient(135deg,rgba(255,255,255,.12),transparent 28%,transparent 70%,rgba(118,255,3,.08));
+box-shadow:inset 0 1px 0 rgba(255,255,255,.16),inset 0 -1px 0 rgba(0,0,0,.45);
+}
+.slide{
+position:absolute;inset:0;opacity:0;overflow:hidden;
+background-size:cover;background-position:center;
+transform:scale(1.08) rotateX(2deg) translateZ(-20px);
+filter:saturate(1.12) contrast(1.05);
+transition:opacity .65s ease,transform 1.1s cubic-bezier(.2,.8,.2,1),filter .8s ease;
+}
+.slide:before{
+content:"";position:absolute;inset:0;
+background:linear-gradient(90deg,rgba(0,0,0,.46),rgba(0,0,0,.08) 55%,rgba(0,0,0,.32)),
+linear-gradient(180deg,rgba(255,255,255,.08),transparent 35%,rgba(0,0,0,.25));
+}
+.slide.active{
+opacity:1;transform:scale(1) rotateX(0) translateZ(0);
+filter:saturate(1.18) contrast(1.06);
+}
+.banner-arrow{
+position:absolute;top:50%;z-index:8;transform:translateY(-50%);
+width:38px;height:38px;border-radius:50%;border:1px solid rgba(255,255,255,.22);
+background:rgba(10,12,16,.55);backdrop-filter:blur(10px);
+color:#fff;display:flex;align-items:center;justify-content:center;
+font-size:14px;cursor:pointer;box-shadow:0 8px 20px rgba(0,0,0,.35);
+}
+.banner-arrow:hover{background:rgba(118,255,3,.22);border-color:#76ff03;color:#76ff03}
+.banner-prev{left:12px}.banner-next{right:12px}
+.banner-dots{
+position:absolute;bottom:11px;left:50%;z-index:9;transform:translateX(-50%);
+display:flex;gap:6px;padding:5px 9px;border-radius:20px;
+background:rgba(0,0,0,.34);backdrop-filter:blur(8px);
+}
+.banner-dot{width:7px;height:7px;border-radius:50%;background:rgba(255,255,255,.45);transition:.25s}
+.banner-dot.active{width:22px;border-radius:8px;background:#76ff03;box-shadow:0 0 12px rgba(118,255,3,.7)}
+@keyframes bannerShine{0%{transform:translateX(-70%) rotate(8deg)}55%,100%{transform:translateX(70%) rotate(8deg)}}
+@media(max-width:480px){.slider-section{height:180px;border-radius:24px}.slider-section:after{border-radius:24px}.banner-arrow{width:32px;height:32px}.banner-prev{left:8px}.banner-next{right:8px}}
+
+.btn-container{display:flex;gap:10px;width:90%;max-width:400px;margin:15px auto}.btn{flex:1;padding:12px;border-radius:12px;font-weight:bold;text-align:center;text-decoration:none;font-size:13px;border:0;color:#fff}.viber{background:#7360f2}.telegram{background:#26a5e4}
+.category-section{
+width:92%;max-width:850px;margin:24px auto;
+display:flex;flex-direction:column;gap:18px;
+perspective:1200px;
+}
+.cat-card{
+height:142px;cursor:pointer;border-radius:28px;position:relative;overflow:hidden;
+display:flex;align-items:center;justify-content:space-between;padding:18px 20px;
+border:1px solid rgba(255,255,255,.14);
+box-shadow:
+0 18px 35px rgba(0,0,0,.45),
+0 4px 10px rgba(0,0,0,.22),
+inset 0 1px 0 rgba(255,255,255,.18),
+inset 0 -1px 0 rgba(0,0,0,.28);
+transform:translateZ(0) rotateX(0) rotateY(0);
+transform-style:preserve-3d;
+transition:transform .28s cubic-bezier(.2,.8,.2,1),box-shadow .28s ease,filter .28s ease;
+isolation:isolate;
+}
+.cat-card:before{
+content:"";position:absolute;inset:0;z-index:-2;border-radius:inherit;
+background:linear-gradient(135deg,rgba(255,255,255,.15),transparent 30%,transparent 65%,rgba(255,255,255,.06));
+}
+.cat-card:after{
+content:"";position:absolute;inset:-80% -30%;z-index:3;pointer-events:none;
+background:linear-gradient(115deg,transparent 40%,rgba(255,255,255,.18) 50%,transparent 60%);
+transform:translateX(-55%) rotate(8deg);
+transition:transform .7s ease;
+}
+.cat-card:hover{
+transform:translateY(-7px) rotateX(2deg) rotateY(-1.5deg) scale(1.012);
+box-shadow:
+0 28px 50px rgba(0,0,0,.55),
+0 0 28px rgba(118,255,3,.10),
+inset 0 1px 0 rgba(255,255,255,.24);
+}
+.cat-card:hover:after{transform:translateX(55%) rotate(8deg)}
+.cat-card:active{
+transform:translateY(1px) scale(.975) rotateX(1deg);
+box-shadow:0 10px 18px rgba(0,0,0,.45),inset 0 2px 8px rgba(0,0,0,.25);
+}
+.card-second{
+background:
+radial-gradient(circle at 85% 20%,rgba(118,255,3,.18),transparent 30%),
+linear-gradient(135deg,#30343b,#111419 65%,#080a0d);
+}
+.card-accessories{
+background:
+radial-gradient(circle at 86% 15%,rgba(91,141,255,.28),transparent 34%),
+linear-gradient(135deg,#303052,#111326 68%,#080a12);
+}
+.card-electronics{
+background:
+radial-gradient(circle at 88% 18%,rgba(49,209,124,.30),transparent 34%),
+linear-gradient(135deg,#245b4a,#102b24 65%,#081712);
+color:#fff;
+}
+.card-repairs{
+background:
+radial-gradient(circle at 86% 15%,rgba(0,196,255,.25),transparent 34%),
+linear-gradient(135deg,#315d78,#211f42 67%,#0d1020);
+}
+.card-banking{
+background:
+radial-gradient(circle at 86% 15%,rgba(255,205,77,.20),transparent 34%),
+linear-gradient(135deg,#284a38,#101f18 68%,#080d0a);
+}
+.cat-info{
+display:flex;flex-direction:column;justify-content:center;
+z-index:5;flex:1;transform:translateZ(28px);
+}
+.cat-title{
+font-size:17px;font-weight:900;color:#fff;margin-bottom:10px;
+text-shadow:0 3px 12px rgba(0,0,0,.5);
+letter-spacing:.1px;
+}
+.cat-mini-chips{display:flex;gap:7px;flex-wrap:wrap}
+.mini-chip{
+background:rgba(255,255,255,.10);
+border:1px solid rgba(255,255,255,.13);
+box-shadow:inset 0 1px 0 rgba(255,255,255,.12),0 5px 12px rgba(0,0,0,.22);
+padding:6px 10px;border-radius:11px;font-size:10px;font-weight:800;
+color:#fff;display:flex;align-items:center;gap:4px;
+backdrop-filter:blur(8px);-webkit-backdrop-filter:blur(8px);
+}
+.cat-img-box{
+width:112px;height:108px;border-radius:22px;overflow:hidden;flex-shrink:0;
+position:relative;z-index:6;
+box-shadow:
+10px 14px 24px rgba(0,0,0,.38),
+inset 0 1px 0 rgba(255,255,255,.2);
+border:1px solid rgba(255,255,255,.18);
+background-size:cover;background-position:center;
+transform:translateZ(45px) rotateY(-4deg) rotateX(2deg);
+transition:transform .3s ease,box-shadow .3s ease;
+}
+.cat-img-box:before{
+content:"";position:absolute;inset:0;
+background:linear-gradient(145deg,rgba(255,255,255,.20),transparent 35%,rgba(0,0,0,.25));
+z-index:1;pointer-events:none;
+}
+.cat-img-box:after{
+content:"";position:absolute;inset:6px;border-radius:17px;
+border:1px solid rgba(255,255,255,.13);pointer-events:none;z-index:2;
+}
+.cat-card:hover .cat-img-box{
+transform:translateZ(62px) rotateY(-7deg) rotateX(3deg) scale(1.035);
+box-shadow:14px 20px 30px rgba(0,0,0,.48),0 0 20px rgba(118,255,3,.08);
+}
+.cat-card .cat-info:before{
+content:"";display:block;width:38px;height:3px;border-radius:10px;
+background:#76ff03;box-shadow:0 0 12px rgba(118,255,3,.65);
+margin-bottom:9px;
+}
+.card-accessories .cat-info:before{background:#6fa3ff;box-shadow:0 0 12px rgba(111,163,255,.65)}
+.card-electronics .cat-info:before{background:#31d17c;box-shadow:0 0 12px rgba(49,209,124,.65)}
+.card-repairs .cat-info:before{background:#20cfff;box-shadow:0 0 12px rgba(32,207,255,.65)}
+.card-banking .cat-info:before{background:#ffd34d;box-shadow:0 0 12px rgba(255,211,77,.65)}
+@media(max-width:480px){
+.category-section{width:94%;gap:15px}
+.cat-card{height:132px;border-radius:24px;padding:15px 14px}
+.cat-title{font-size:15px}
+.cat-img-box{width:94px;height:94px;border-radius:19px;transform:translateZ(35px) rotateY(-3deg)}
+.cat-card:hover .cat-img-box{transform:translateZ(45px) rotateY(-5deg) scale(1.02)}
+.mini-chip{font-size:9px;padding:5px 8px}
+}
+@media(min-width:768px){
+.cat-card{height:155px;padding:20px 24px}
+.cat-img-box{width:125px;height:120px}
+}
+.setting-overlay,.edit-modal,.detail-modal,.product-modal,.fullscreen-modal{display:none;position:fixed;inset:0;z-index:9999}
+.setting-overlay{background:rgba(0,0,0,.85);padding:75px 20px 20px;overflow-y:auto}.setting-panel{background:rgba(18,18,22,.98);max-width:600px;margin:auto;padding:24px;border-radius:28px;border:1px solid rgba(255,255,255,.08);color:#fff;box-shadow:0 30px 70px rgba(0,0,0,.9)}
+.admin-nav{margin-bottom:20px;border-bottom:1px solid rgba(255,255,255,.08);padding-bottom:16px}.nav-btn{padding:9px 16px;background:rgba(255,255,255,.04);border:1px solid rgba(255,255,255,.06);color:#a1a1aa;border-radius:12px;font-weight:700;font-size:12px}.nav-btn.active{background:#76ff03;color:#000;border-color:#76ff03}
+.admin-section-title{font-size:12px;color:#76ff03;margin:22px 0 12px;font-weight:800;text-transform:uppercase;letter-spacing:1px}
+.admin-product-item{display:flex;align-items:center;background:linear-gradient(135deg,#18181b,#111114);padding:14px 16px;margin-bottom:12px;border-radius:20px;border:1px solid rgba(255,255,255,.06);gap:14px;box-shadow:0 10px 25px rgba(0,0,0,.6)}
+.admin-product-item img{width:56px;height:56px;object-fit:cover;border-radius:14px;background:#09090b;border:1px solid rgba(255,255,255,.1)}.prod-info-group{flex-grow:1;overflow:hidden}.prod-title{font-size:14px;font-weight:700;white-space:nowrap;overflow:hidden;text-overflow:ellipsis}.prod-price-tag{font-size:12px;color:#a1a1aa;font-weight:600}.admin-actions-group{display:flex;gap:8px}.admin-edit-btn,.soldout-toggle-btn{padding:8px 10px;border-radius:12px;cursor:pointer;font-size:11px}.admin-edit-btn{background:rgba(255,255,255,.05);color:#fff;border:1px solid rgba(255,255,255,.08)}.soldout-toggle-btn{background:rgba(239,68,68,.1);color:#f87171;border:1px solid rgba(239,68,68,.2)}.active-soldout{background:#ef4444;color:#fff}
+.admin-add-btn{width:100%;padding:14px;background:#18181b;color:#76ff03;font-weight:800;border:1px dashed rgba(118,255,3,.4);border-radius:16px;cursor:pointer}
+.setting-item,.item-box{background:#18181b;border:1px solid rgba(255,255,255,.06);border-radius:16px;padding:15px;margin-bottom:12px}.setting-item{display:flex;justify-content:space-between;align-items:center}
+.save-btn{background:#76ff03;color:#000;border:0;padding:10px;font-weight:bold;border-radius:8px;cursor:pointer;margin-top:10px;width:100%}.delete-btn{background:#ef4444;color:#fff;border:0;padding:8px;margin-top:6px;border-radius:8px;cursor:pointer;width:100%;font-size:11px;font-weight:bold}
+input,textarea{width:100%;background:#0f0f12;color:#fff;border:1px solid rgba(255,255,255,.1);padding:10px;margin-top:5px;border-radius:8px;box-sizing:border-box;font-size:12px}
+.product-modal{background:#000;padding:20px;overflow-y:auto}.product-grid{display:grid;grid-template-columns:1fr;gap:20px;max-width:720px;margin:10px auto}.product-card{background:#383838;border-radius:24px;padding:14px;text-align:left;border:1px solid #555;box-shadow:0 10px 30px rgba(0,0,0,.5);cursor:pointer;color:#fff;position:relative}.product-card img{width:100%;height:210px;object-fit:cover;border-radius:16px;margin-bottom:12px;background:#222}.product-card.sold-out{opacity:.45;cursor:not-allowed;filter:grayscale(40%)}.sold-out-badge{position:absolute;top:25px;right:25px;background:#ff4757;color:#fff;padding:6px 14px;font-weight:900;font-size:14px;border-radius:8px;transform:rotate(10deg)}
+.detail-modal{background:rgba(0,0,0,.9);padding:20px;overflow-y:auto}.detail-content{background:#333;max-width:450px;margin:40px auto;padding:20px;border-radius:24px;border:1px solid #484848;color:#fff;position:relative}.detail-content img{width:100%;height:220px;object-fit:cover;border-radius:16px;margin-bottom:15px}
+.fullscreen-modal{background:rgba(0,0,0,.95);justify-content:center;align-items:center;padding:10px}.fullscreen-content{max-width:100%;max-height:100%;object-fit:contain}.fullscreen-close{position:absolute;top:20px;right:20px;background:#ff4757;color:#fff;border:0;padding:8px 14px;border-radius:6px}
+.edit-modal{background:rgba(0,0,0,.9);padding:20px;overflow-y:auto}.edit-content{background:#161619;max-width:450px;margin:30px auto;padding:20px;border-radius:16px;border:1px solid rgba(255,255,255,.1)}
+#kkgToast{position:fixed;top:20px;left:50%;transform:translateX(-50%) translateY(-100px);background:#1e1e1e;color:#fff;padding:12px 20px;border-radius:12px;border:1px solid #76ff03;z-index:999999;opacity:0;transition:.3s;font-size:13px;font-weight:bold}#kkgToast.show{transform:translateX(-50%) translateY(0);opacity:1}#kkgToast.error{border-color:#ff4757;color:#ff4757}
+.image-upload-box{width:100%;background:linear-gradient(135deg,#18181b,#101014);border:1px dashed rgba(118,255,3,.45);border-radius:16px;padding:14px;margin-bottom:10px}
+.image-upload-preview{width:100%;height:180px;border-radius:14px;background:#09090b;border:1px solid rgba(255,255,255,.08);display:flex;align-items:center;justify-content:center;overflow:hidden;margin-bottom:10px}.image-upload-preview img{width:100%;height:100%;object-fit:cover}.image-upload-placeholder{color:#52525b;font-size:12px;text-align:center}
+.image-upload-btn{width:100%;padding:11px;border-radius:10px;border:1px solid rgba(118,255,3,.35);background:rgba(118,255,3,.1);color:#76ff03;font-weight:800;font-size:12px;cursor:pointer}.upload-status{text-align:center;font-size:11px;color:#a1a1aa;margin-top:8px;min-height:15px}.upload-status.success{color:#76ff03}.upload-status.error{color:#ff4757}
+#pwaInstallBanner{display:none;position:fixed;bottom:20px;left:50%;transform:translateX(-50%);width:90%;max-width:380px;background:#1e1e1e;border:2px solid #76ff03;border-radius:16px;padding:15px;z-index:99999}
+@media(min-width:768px){.product-grid{grid-template-columns:repeat(2,1fr)}.slider-section,.btn-container,.category-section{max-width:650px}}
+@media(min-width:1024px){.product-grid{grid-template-columns:repeat(3,1fr)}.slider-section,.btn-container,.category-section{max-width:850px}}
+</style>
+</head>
+
+<body>
+
+<div id="kkgToast"><i id="toastIcon" class="fa-solid fa-circle-check"></i><span id="toastMsg"></span></div>
+
+<header class="main-header">
+<div class="logo-container" id="logoTrigger">
+<div class="logo-text-group"><span class="logo-text">KK<span class="logo-highlight">G</span> MOBILE</span><span class="sub-text">Accessories & Electronics</span></div>
+<div class="logo-timer-bar" id="logoTimerBar"></div>
+</div>
+<div class="header-gif-container" id="headerGifWrapper"><img id="headerGifImg" src="" alt="Header GIF"></div>
+<div class="header-actions"><a href="tel:09778077813" class="call-icon-btn">📞</a></div>
+</header>
+
+<div id="pwaInstallBanner">
+<div style="display:flex;align-items:center;gap:12px;margin-bottom:12px"><div style="background:#76ff03;color:#000;font-weight:900;font-size:20px;padding:10px 14px;border-radius:10px">KKG</div><div><div style="font-weight:bold;font-size:14px">KKG Mobile App ထည့်သွင်းရန်</div><div style="font-size:11px;color:#aaa">ဖုန်း Home Screen ပေါ်သို့ တင်ပါ။</div></div></div>
+<div style="display:flex;gap:8px"><button id="pwaInstallBtn" style="flex:2;background:#76ff03;color:#000;border:0;padding:10px;font-weight:bold;border-radius:8px">📲 Install App</button><button onclick="closePwaBanner()" style="flex:1;background:#333;color:#fff;border:0;padding:10px;border-radius:8px">နောက်မှ</button></div>
+</div>
+
+<div class="ticker-container" id="tickerWrapper"><marquee id="tickerMarquee" scrollamount="6">ကြိုဆိုပါတယ် KKG Mobile!</marquee></div>
+<div class="slider-section" id="sliderContainer"></div>
+<div class="btn-container"><a href="viber://chat?number=09778077813" class="btn viber">Viber</a><a href="https://t.me/contact/1786893295:BXQAidEY1LEdvZ6_" class="btn telegram">Telegram</a></div>
+
+<div class="category-section">
+
+<div class="cat-card card-second" onclick="openProductModal('secondphones')">
+  <div class="cat-info">
+    <div class="cat-title">📱 ဖုန်း Good Second</div>
+    <div class="cat-mini-chips"><span class="mini-chip">ရွေးချယ်ရန်</span><span class="mini-chip">အာမခံ</span></div>
+  </div>
+  <div class="cat-img-box" style="background-image:url('https://images.unsplash.com/photo-1511707171634-5f897ff02aa9?w=700')"></div>
+</div>
+
+<div class="cat-card card-accessories" onclick="openProductModal('accessories')">
+  <div class="cat-info">
+    <div class="cat-title">📱 ဖုန်းအပိုပစ္စည်းများ</div>
+    <div class="cat-mini-chips"><span class="mini-chip">Accessories</span><span class="mini-chip">Quality</span></div>
+  </div>
+  <div class="cat-img-box" style="background-image:url('https://images.unsplash.com/photo-1584438784894-089d6a62b8fa?w=700')"></div>
+</div>
+
+<div class="cat-card card-electronics" onclick="openProductModal('electronics')">
+  <div class="cat-info">
+    <div class="cat-title">🔌 လျပ်စစ်ပစ္စည်းများ</div>
+    <div class="cat-mini-chips"><span class="mini-chip">Gadgets</span><span class="mini-chip">စိတ်ချရ</span></div>
+  </div>
+  <div class="cat-img-box" style="background-image:url('https://images.unsplash.com/photo-1526738549149-8e07eca6c147?w=700')"></div>
+</div>
+
+<div class="cat-card card-repairs" onclick="openProductModal('repairs')">
+  <div class="cat-info">
+    <div class="cat-title">🛠️ ဖုန်းအမြန်ပြင်ဆင်ခြင်း</div>
+    <div class="cat-mini-chips"><span class="mini-chip">Fast Repair</span><span class="mini-chip">ကျွမ်းကျင်</span></div>
+  </div>
+  <div class="cat-img-box" style="background-image:url('https://images.unsplash.com/photo-1581092160607-ee22621dd758?w=700')"></div>
+</div>
+
+<div class="cat-card card-banking" onclick="showToast('Bank အကောင့် UI ကို မူရင်းအတိုင်း ဆက်လက်ထည့်နိုင်ပါသည်။')">
+  <div class="cat-info">
+    <div class="cat-title">💳 ငွေလွှဲရန် (Bank အကောင့်များ)</div>
+    <div class="cat-mini-chips"><span class="mini-chip">KBZ / AYA / Wave</span><span class="mini-chip">လုံခြုံစိတ်ချရ</span></div>
+  </div>
+  <div class="cat-img-box" style="background-image:url('https://images.unsplash.com/photo-1559526324-4b87b5e36e44?w=700')"></div>
+</div>
+
+</div>
+
+<div style="text-align:center;margin-top:30px;padding:20px"><hr style="border:0;border-top:1px solid rgba(255,255,255,.15);width:85%;max-width:400px;margin:0 auto 20px"><button onclick="openUpgradeModal()" style="background:rgba(124,58,237,.15);color:#a78bfa;border:1px solid rgba(124,58,237,.35);padding:8px 18px;border-radius:20px;font-size:12px;font-weight:700">☁ Upgrade</button><span style="color:#666;margin:0 8px">|</span><button onclick="openAboutModal()" style="background:rgba(2,132,199,.15);color:#38bdf8;border:1px solid rgba(2,132,199,.35);padding:8px 18px;border-radius:20px;font-size:12px;font-weight:700">ⓘ About</button><br><span onclick="checkAdminSessionAndOpen()" style="display:inline-block;margin-top:18px;color:#444;font-size:10px;text-decoration:underline">Admin Portal</span></div>
+
+<div id="upgradeModal" class="product-modal"><div style="max-width:500px;margin:auto"><button onclick="closeAllOverlays()" style="padding:8px 14px;background:#333;color:#fff;border:0;border-radius:8px">← နောက်သို့</button><h3>☁ App Upgrade & Status</h3><div class="item-box"><div>လက်ရှိ Version: <b id="lblAppVersion">v1.2.0</b></div><p id="lblServerNotice">လက်တလောတွင် ဆာဗာအခြေအနေ ပုံမှန်ရှိပါသည်။</p></div><button class="save-btn" onclick="performAppUpgrade()">🔄 Update / Check Latest Version</button></div></div>
+
+<div id="aboutModal" class="product-modal"><div style="max-width:500px;margin:auto"><button onclick="closeAllOverlays()" style="padding:8px 14px;background:#333;color:#fff;border:0;border-radius:8px">← နောက်သို့</button><h3 style="color:#76ff03">ဆိုင်နှင့် App အကြောင်း</h3><div class="item-box"><b style="color:#76ff03">KKG MOBILE</b><p id="lblAboutText">ဖုန်း Good Second များ၊ ဖုန်းအပိုပစ္စည်းများ၊ လျပ်စစ်ပစ္စည်းများနှင့် ဖုန်းပြင်ဆင်ရေးဝန်ဆောင်မှုများ ရရှိနိုင်ပါသည်။</p></div></div></div>
+
+<div class="setting-overlay" id="passwordModal"><div class="setting-panel" style="max-width:320px;text-align:center"><h3 style="color:#76ff03">Admin Password လိုအပ်ပါသည်</h3><input type="password" id="adminPasswordInput" placeholder="Password ထည့်ပါ"><button class="save-btn" onclick="verifyAdminPassword()">Login</button><button onclick="document.getElementById('passwordModal').style.display='none'" style="background:#ff4757;color:#fff;border:0;padding:8px;width:100%;border-radius:6px;margin-top:8px">Cancel</button></div></div>
+
+<div class="setting-overlay" id="settingPanel"><div class="setting-panel">
+<div style="display:flex;justify-content:space-between;align-items:center;margin-bottom:20px"><h3 style="color:#76ff03;margin:0">Admin Dashboard</h3><button onclick="closeAllOverlays()" style="background:#ef4444;color:#fff;border:0;padding:7px 10px;border-radius:8px">✕</button></div>
+<div class="admin-nav"><button class="nav-btn active" onclick="switchTab('products',this)">Products List</button><button class="nav-btn" onclick="switchTab('tools',this)">Tools</button><button class="nav-btn" onclick="switchTab('themes',this)">Themes</button><button class="nav-btn" onclick="switchTab('security',this)">Security</button></div>
+<div id="tab-products">
+<div class="admin-section-title">Repairs</div><div id="repairList"></div>
+<div class="admin-section-title">Second Phones</div><div id="secondPhoneList"></div>
+<div class="admin-section-title">Accessories</div><div id="accessoryList"></div>
+<div class="admin-section-title">Electronics</div><div id="electronicList"></div>
+</div>
+<div id="tab-tools" class="tab-content" style="display:none"><div class="admin-section-title">Banners</div><div id="slideList"></div><div class="admin-section-title">Ticker</div><div class="setting-item" style="display:block"><input id="tickerTextInput" placeholder="ကြေညာချက်"><button class="save-btn" onclick="saveTickerText()">Update Text</button><button id="tickerToggleBtn" onclick="toggleTickerStatus()" class="save-btn">ON</button></div></div>
+<div id="tab-themes" class="tab-content" style="display:none"><div class="setting-item"><span>Dark / Light</span><button id="themeBtn" onclick="toggleTheme()" class="save-btn" style="width:auto">Light Mode</button></div><div class="setting-item" style="display:block"><input id="wallpaperInput" placeholder="Wallpaper Image URL"><button class="save-btn" onclick="saveWallpaper()">Save Wallpaper</button></div></div>
+<div id="tab-security" class="tab-content" style="display:none"><div class="setting-item" style="display:block"><input type="password" id="newPswInput" placeholder="Password အသစ်"><button class="save-btn" onclick="updateAdminPassword()">Update Password</button></div></div>
+</div></div>
+
+<div id="productModal" class="product-modal"><div style="display:flex;justify-content:space-between;align-items:center;position:sticky;top:0;background:#000;padding:12px 10px;z-index:10;border-bottom:1px solid #333"><h2 id="modalTitle" style="color:#76ff03;margin:0">Products</h2><button onclick="closeAllOverlays()" style="padding:8px 12px;background:#ff4757;color:#fff;border:0;border-radius:4px">✕</button></div><div class="product-grid" id="modalGrid"></div></div>
+<div id="detailModal" class="detail-modal"><div class="detail-content"><button onclick="document.getElementById('detailModal').style.display='none'" style="position:absolute;right:15px;top:15px;background:#ff4757;color:#fff;border:0;padding:5px 10px;border-radius:4px">✕</button><div id="detailBody"></div></div></div>
+<div id="fullscreenModal" class="fullscreen-modal" onclick="closeFullscreen()"><button class="fullscreen-close">✕ ပိတ်ရန်</button><img id="fullscreenImg" class="fullscreen-content"></div>
+<div id="editModal" class="edit-modal"><div class="edit-content"><div style="display:flex;justify-content:space-between;align-items:center"><h3 style="color:#76ff03;margin:0">Edit Item</h3><button onclick="document.getElementById('editModal').style.display='none'" style="background:#ef4444;color:#fff;border:0;padding:5px 8px;border-radius:6px">✕</button></div><div id="editModalBody"></div></div></div>
+
+<script>
+const firebaseConfig={apiKey:"AIzaSyDG4os_NtAm0m8CVFPudH42GVwcoRTm2w0",authDomain:"kkg-mobile-1f0f3.firebaseapp.com",projectId:"kkg-mobile-1f0f3",storageBucket:"kkg-mobile-1f0f3.firebasestorage.app",messagingSenderId:"106472581329",appId:"1:106472581329:web:f2382ad5ecd3aa80e77df0"};
+firebase.initializeApp(firebaseConfig);
+const db=firebase.firestore();
+const CLOUD_NAME="aqclobm0",UPLOAD_PRESET="kkg_preset";
+let secondPhoneData=[],accData=[],elecData=[],repairData=[],slideData=[];
+let tickerSpeed=6,tickerEnabled=true,tickerTextContent="ကြိုဆိုပါတယ် KKG Mobile!";
+
+function showToast(message,isError=false){const t=document.getElementById("kkgToast");document.getElementById("toastMsg").innerText=message;t.classList.toggle("error",isError);t.classList.add("show");clearTimeout(window.toastTimer);window.toastTimer=setTimeout(()=>t.classList.remove("show"),3000)}
+function escapeHtmlValue(v){return String(v).replace(/&/g,"&amp;").replace(/"/g,"&quot;").replace(/'/g,"&#039;").replace(/</g,"&lt;").replace(/>/g,"&gt;")}
+
+db.collection("kkg_slides").onSnapshot(s=>{slideData=[];s.forEach(d=>slideData.push({id:d.id,...d.data()}));renderSlides();renderSlideAdmin()});
+db.collection("kkg_second_phones").onSnapshot(s=>{secondPhoneData=[];s.forEach(d=>secondPhoneData.push({id:d.id,...d.data()}));renderAdmin()});
+db.collection("kkg_accessories").onSnapshot(s=>{accData=[];s.forEach(d=>accData.push({id:d.id,...d.data()}));renderAdmin()});
+db.collection("kkg_electronics").onSnapshot(s=>{elecData=[];s.forEach(d=>elecData.push({id:d.id,...d.data()}));renderAdmin()});
+db.collection("kkg_repairs").onSnapshot(s=>{repairData=[];s.forEach(d=>repairData.push({id:d.id,...d.data()}));renderAdmin()});
+db.collection("kkg_settings").doc("appConfig").onSnapshot(d=>{if(!d.exists)return;const x=d.data();if(x.version){lblAppVersion.innerText=x.version}if(x.serverNotice)lblServerNotice.innerText=x.serverNotice;if(x.aboutText)lblAboutText.innerHTML=x.aboutText});
+db.collection("kkg_settings").doc("tickerConfig").onSnapshot(d=>{if(!d.exists)return;const x=d.data();if(x.speed!==undefined)tickerSpeed=x.speed;if(x.enabled!==undefined)tickerEnabled=x.enabled;if(x.text!==undefined)tickerTextContent=x.text;updateTickerUI()});
+db.collection("kkg_settings").doc("wallpaperConfig").onSnapshot(d=>{document.body.style.backgroundImage=d.exists&&d.data().url?`url('${d.data().url}')`:"none"});
+
+function updateTickerUI(){tickerMarquee.innerText=tickerTextContent;tickerWrapper.style.display=tickerEnabled?"block":"none"}
+function saveTickerText(){const text=tickerTextInput.value;db.collection("kkg_settings").doc("tickerConfig").set({text,enabled:tickerEnabled,speed:tickerSpeed},{merge:true}).then(()=>showToast("Ticker သိမ်းပြီးပါပြီ"))}
+function toggleTickerStatus(){tickerEnabled=!tickerEnabled;db.collection("kkg_settings").doc("tickerConfig").set({text:tickerTextContent,enabled:tickerEnabled,speed:tickerSpeed},{merge:true})}
+function saveWallpaper(){db.collection("kkg_settings").doc("wallpaperConfig").set({url:wallpaperInput.value.trim()},{merge:true}).then(()=>showToast("Wallpaper သိမ်းပြီးပါပြီ"))}
+function toggleTheme(){document.body.classList.toggle("light-mode");themeBtn.innerText=document.body.classList.contains("light-mode")?"Dark Mode":"Light Mode"}
+
+function renderSlides(){
+sliderContainer.innerHTML="";
+if(!slideData.length){
+sliderContainer.innerHTML='<div class="slide active" style="display:flex;align-items:center;justify-content:center;color:#777">No Banner</div>';
+return;
+}
+slideData.forEach((x,i)=>sliderContainer.innerHTML+=`<div class="slide ${i?"":"active"}" style="background-image:url('${x.img||""}')"></div>`);
+if(slideData.length>1){
+sliderContainer.insertAdjacentHTML("beforeend",
+'<button class="banner-arrow banner-prev" aria-label="Previous Banner" onclick="changeBanner(-1)"><i class="fa-solid fa-chevron-left"></i></button>'+
+'<button class="banner-arrow banner-next" aria-label="Next Banner" onclick="changeBanner(1)"><i class="fa-solid fa-chevron-right"></i></button>'+
+'<div class="banner-dots">'+slideData.map((_,i)=>`<span class="banner-dot ${i===0?"active":""}" onclick="goBanner(${i})"></span>`).join("")+'</div>');
+}
+}
+function getBannerIndex(){
+const slides=document.querySelectorAll("#sliderContainer .slide");
+return Math.max(0,[...slides].findIndex(s=>s.classList.contains("active")));
+}
+function setBannerIndex(index){
+const slides=document.querySelectorAll("#sliderContainer .slide");
+const dots=document.querySelectorAll("#sliderContainer .banner-dot");
+if(!slides.length)return;
+index=(index+slides.length)%slides.length;
+slides.forEach((s,i)=>s.classList.toggle("active",i===index));
+dots.forEach((d,i)=>d.classList.toggle("active",i===index));
+}
+function changeBanner(dir){setBannerIndex(getBannerIndex()+dir)}
+function goBanner(index){setBannerIndex(index)}
+
+function renderSlideAdmin(){slideList.innerHTML="";slideData.forEach(x=>slideList.innerHTML+=`<div class="item-box"><img src="${x.img||""}" style="width:100%;height:120px;object-fit:cover;border-radius:10px"><input id="s_img_${x.id}" value="${escapeHtmlValue(x.img||"")}"><button class="save-btn" onclick="db.collection('kkg_slides').doc('${x.id}').update({img:document.getElementById('s_img_${x.id}').value}).then(()=>showToast('Saved!'))">Save</button><button class="delete-btn" onclick="db.collection('kkg_slides').doc('${x.id}').delete()">Delete</button></div>`);slideList.innerHTML+=`<button class="admin-add-btn" onclick="db.collection('kkg_slides').add({img:''})">+ Add Banner</button>`}
+
+function renderAdmin(){renderProductList("repairList",repairData,"kkg_repairs");renderProductList("secondPhoneList",secondPhoneData,"kkg_second_phones");renderProductList("accessoryList",accData,"kkg_accessories");renderProductList("electronicList",elecData,"kkg_electronics")}
+function renderProductList(el,data,col){
+const list=document.getElementById(el);list.innerHTML="";
+data.forEach(x=>{const sold=x.soldOut===true;list.innerHTML+=`<div class="admin-product-item">${x.img?`<img src="${x.img}">`:`<div style="width:56px;height:56px;background:#09090b;border-radius:14px;display:flex;align-items:center;justify-content:center;color:#52525b">No Pic</div>`}<div class="prod-info-group"><div class="prod-title">${escapeHtmlValue(x.name||"အမည်မရှိ")}</div><div class="prod-price-tag">${escapeHtmlValue(x.price||"ဈေးနှုန်းမရှိပါ")} Ks</div></div><div class="admin-actions-group"><button class="soldout-toggle-btn ${sold?"active-soldout":""}" onclick="db.collection('${col}').doc('${x.id}').update({soldOut:${!sold}})">${sold?"SOLD":"Stock"}</button><button class="admin-edit-btn" onclick="openEditModal('${col}','${x.id}')">Edit</button></div></div>`});
+list.innerHTML+=`<button class="admin-add-btn" onclick="addNewProduct('${col}')">+ ပစ္စည်းအသစ် ထည့်မည်</button>`
+}
+
+async function addNewProduct(col){const ref=await db.collection(col).add({name:"အမည်သစ်",about:"",price:"",img:"",soldOut:false});openEditModal(col,ref.id)}
+
+function getData(col){return col==="kkg_second_phones"?secondPhoneData:col==="kkg_accessories"?accData:col==="kkg_repairs"?repairData:elecData}
+function openEditModal(col,id){
+const item=getData(col).find(x=>x.id===id);if(!item)return;
+editModalBody.innerHTML=`
+<div class="image-upload-box">
+<div class="image-upload-preview" id="previewBox_${id}">${item.img?`<img src="${item.img}" id="previewImg_${id}">`:`<div class="image-upload-placeholder"><i class="fa-solid fa-image" style="font-size:30px"></i><br>ပုံမရှိသေးပါ</div>`}</div>
+<input type="file" id="file_${id}" accept="image/*" style="display:none" onchange="handleProductImageUpload(event,'${col}','${id}')">
+<button type="button" class="image-upload-btn" onclick="document.getElementById('file_${id}').click()"><i class="fa-solid fa-cloud-arrow-up"></i> Gallery မှ ပုံရွေးမည်</button>
+<div id="uploadStatus_${id}" class="upload-status"></div>
+</div>
+<label>Name:</label><input type="text" id="name_${id}" value="${escapeHtmlValue(item.name||"")}" placeholder="နာမည်">
+<label>About:</label><textarea id="about_${id}" rows="3" placeholder="အကြောင်းအရာ">${escapeHtmlValue(item.about||"")}</textarea>
+<label>Price:</label><input type="text" id="price_${id}" value="${escapeHtmlValue(item.price||"")}" placeholder="ဈေးနှုန်း">
+<button class="save-btn" id="saveProductBtn_${id}" onclick="saveProduct('${col}','${id}')"><i class="fa-solid fa-floppy-disk"></i> Save Changes</button>
+<button class="delete-btn" onclick="deleteProduct('${col}','${id}')"><i class="fa-solid fa-trash"></i> Delete Item</button>`;
+editModal.style.display="block"
+}
+
+async function handleProductImageUpload(event,col,id){
+const file=event.target.files[0];if(!file)return;
+if(!file.type.startsWith("image/")){showToast("ပုံဖိုင်ကိုသာ ရွေးပါ",true);return}
+const status=document.getElementById(`uploadStatus_${id}`),box=document.getElementById(`previewBox_${id}`);
+status.innerHTML='<i class="fa-solid fa-spinner fa-spin"></i> ပုံ Upload လုပ်နေပါသည်...';
+const reader=new FileReader();reader.onload=e=>box.innerHTML=`<img src="${e.target.result}">`;reader.readAsDataURL(file);
+try{
+const fd=new FormData();fd.append("file",file);fd.append("upload_preset",UPLOAD_PRESET);
+const r=await fetch(`https://api.cloudinary.com/v1_1/${CLOUD_NAME}/image/upload`,{method:"POST",body:fd});
+if(!r.ok)throw new Error("Cloudinary upload failed");
+const result=await r.json();if(!result.secure_url)throw new Error("No secure URL");
+window[`uploadedImage_${id}`]=result.secure_url;
+status.className="upload-status success";status.innerHTML='<i class="fa-solid fa-circle-check"></i> Upload အောင်မြင်ပါပြီ';
+showToast("ပုံ Upload အောင်မြင်ပါပြီ!");
+}catch(e){console.error(e);status.className="upload-status error";status.innerHTML="ပုံ Upload မအောင်မြင်ပါ";showToast("ပုံ Upload မအောင်မြင်ပါ",true)}
+}
+
+async function saveProduct(col,id){
+const item=getData(col).find(x=>x.id===id);const img=window[`uploadedImage_${id}`]||item?.img||"";
+const name=document.getElementById(`name_${id}`).value.trim(),about=document.getElementById(`about_${id}`).value.trim(),price=document.getElementById(`price_${id}`).value.trim();
+const btn=document.getElementById(`saveProductBtn_${id}`);btn.disabled=true;btn.innerHTML='<i class="fa-solid fa-spinner fa-spin"></i> သိမ်းနေပါသည်...';
+try{await db.collection(col).doc(id).update({img,name,about,price});delete window[`uploadedImage_${id}`];showToast("Product သိမ်းပြီးပါပြီ");editModal.style.display="none"}catch(e){console.error(e);showToast("သိမ်းဆည်းရာတွင် Error ဖြစ်နေပါသည်",true)}finally{btn.disabled=false}
+}
+async function deleteProduct(col,id){try{await db.collection(col).doc(id).delete();delete window[`uploadedImage_${id}`];editModal.style.display="none";showToast("Product ဖျက်ပြီးပါပြီ")}catch(e){showToast("ဖျက်ရာတွင် Error ဖြစ်နေပါသည်",true)}}
+
+function openProductModal(type){
+const data=type==="repairs"?repairData:type==="secondphones"?secondPhoneData:type==="accessories"?accData:elecData;
+modalTitle.innerText=type==="repairs"?"ဖုန်းအမြန်ပြင်ဆင်ခြင်း":type==="secondphones"?"ဖုန်း Good Second များ":type==="accessories"?"ဖုန်းအပိုပစ္စည်းများ":"လျပ်စစ်ပစ္စည်းများ";modalGrid.innerHTML="";
+if(!data.length){modalGrid.innerHTML='<div style="color:#aaa;text-align:center;padding:20px">အချက်အလက်များ မရှိသေးပါ</div>'}else data.forEach(x=>{const sold=x.soldOut===true;modalGrid.innerHTML+=`<div class="product-card ${sold?"sold-out":""}" ${sold?"":`onclick="openDetailView('${type}','${x.id}')"`}>${sold?'<div class="sold-out-badge">SOLD OUT</div>':""}${x.img?`<img src="${x.img}">`:`<div style="height:210px;background:#222;display:flex;align-items:center;justify-content:center;border-radius:16px">No Image</div>`}<div style="font-size:20px;font-weight:700;margin-bottom:8px">${escapeHtmlValue(x.name||"အမည်မရှိ")}</div><div style="font-size:12px;color:${sold?"#888":"#1e90ff"}">${sold?"ပစ္စည်းကုန်သွားပါပြီ":"အသေးစိတ်ကြည့်ရန်"}</div></div>`});productModal.style.display="block"}
+function openDetailView(type,id){const data=type==="repairs"?repairData:type==="secondphones"?secondPhoneData:type==="accessories"?accData:elecData;const x=data.find(i=>i.id===id);if(!x||x.soldOut)return;detailBody.innerHTML=`${x.img?`<img src="${x.img}" onclick="openFullscreen('${x.img}')">`:""}<div style="color:#76ff03;font-weight:700">${x.price||"ဈေးနှုန်းမရှိပါ"} Ks</div><h2>${escapeHtmlValue(x.name||"အမည်မရှိ")}</h2><p style="white-space:pre-line;color:#ccc">${escapeHtmlValue(x.about||"အကြောင်းအရာ မရှိသေးပါ")}</p><div style="display:flex;gap:10px"><a href="viber://chat?number=09778077813" class="btn viber">Viber</a><a href="https://t.me/contact/1786893295:BXQAidEY1LEdvZ6_" class="btn telegram">Telegram</a></div>`;detailModal.style.display="block"}
+function openFullscreen(src){fullscreenImg.src=src;fullscreenModal.style.display="flex"}function closeFullscreen(){fullscreenModal.style.display="none"}
+function closeAllOverlays(){document.querySelectorAll(".setting-overlay,.product-modal,.detail-modal,.edit-modal,#upgradeModal,#aboutModal").forEach(x=>x.style.display="none")}
+function switchTab(tab,el){document.querySelectorAll("#settingPanel .tab-content").forEach(x=>x.style.display="none");document.querySelectorAll(".admin-nav .nav-btn").forEach(x=>x.classList.remove("active"));document.getElementById("tab-"+tab).style.display="block";el.classList.add("active")}
+function openUpgradeModal(){upgradeModal.style.display="block"}function openAboutModal(){aboutModal.style.display="block"}function performAppUpgrade(){showToast("စစ်ဆေးနေပါပြီ...");setTimeout(()=>location.reload(),1200)}
+function checkAdminSessionAndOpen(){const e=localStorage.getItem("adminSessionExpiry");if(e&&Date.now()<+e)settingPanel.style.display="block";else{passwordModal.style.display="block";adminPasswordInput.value="";adminPasswordInput.focus()}}
+async function verifyAdminPassword(){try{const d=await db.collection("kkg_settings").doc("adminAuth").get();const p=d.exists&&d.data().password?d.data().password:"1451993";if(adminPasswordInput.value.trim()===p){localStorage.setItem("adminSessionExpiry",Date.now()+1800000);passwordModal.style.display="none";settingPanel.style.display="block"}else showToast("Password မှားယွင်းနေပါသည်",true)}catch(e){showToast(e.message,true)}}
+async function updateAdminPassword(){const p=newPswInput.value.trim();if(!p)return showToast("Password အသစ်ထည့်ပါ",true);await db.collection("kkg_settings").doc("adminAuth").set({password:p},{merge:true});newPswInput.value="";showToast("Password ပြောင်းပြီးပါပြီ")}
+
+let deferredPrompt;window.addEventListener("beforeinstallprompt",e=>{e.preventDefault();deferredPrompt=e;pwaInstallBanner.style.display="block"});pwaInstallBtn.onclick=async()=>{if(deferredPrompt){deferredPrompt.prompt();await deferredPrompt.userChoice;deferredPrompt=null;pwaInstallBanner.style.display="none"}};function closePwaBanner(){pwaInstallBanner.style.display="none"}
+
+let holdTimer,progressInterval,startTime;logoTrigger.addEventListener("touchstart",e=>{e.preventDefault();startTime=Date.now();progressInterval=setInterval(()=>logoTimerBar.style.width=Math.min(100,(Date.now()-startTime)/50)+"%",50);holdTimer=setTimeout(()=>{clearInterval(progressInterval);logoTimerBar.style.width="0";checkAdminSessionAndOpen()},5000)},{passive:false});["touchend","touchcancel","mouseleave"].forEach(ev=>logoTrigger.addEventListener(ev,()=>{clearTimeout(holdTimer);clearInterval(progressInterval);logoTimerBar.style.width="0"}));
+
+document.querySelectorAll(".cat-card").forEach(card=>{
+  card.addEventListener("pointermove",e=>{
+    if(e.pointerType==="touch")return;
+    const r=card.getBoundingClientRect();
+    const x=(e.clientX-r.left)/r.width-.5;
+    const y=(e.clientY-r.top)/r.height-.5;
+    card.style.transform=`translateY(-5px) rotateX(${-y*4}deg) rotateY(${x*5}deg) scale(1.01)`;
+  });
+  card.addEventListener("pointerleave",()=>{
+    card.style.transform="";
+  });
+});
+
+setInterval(()=>{const s=document.querySelectorAll("#sliderContainer .slide");if(s.length>1)changeBanner(1)},4500);
+</script>
+</body>
+</html>
